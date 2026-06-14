@@ -8,15 +8,18 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { Character } from "@/lib/types";
 import { getCharacterAvatarUrl } from "@/lib/utils";
+import { cardHoverIcon } from "@/lib/anime";
 
 interface CharacterCardProps {
   character: Character;
   index?: number;
+  featured?: boolean;
 }
 
-export function CharacterCard({ character, index = 0 }: CharacterCardProps) {
+export function CharacterCard({ character, index = 0, featured = false }: CharacterCardProps) {
   const avatarUrl = getCharacterAvatarUrl(character);
   const isDicebear = avatarUrl.includes("api.dicebear.com");
+  const hoverIcon = cardHoverIcon(character.id);
 
   return (
     <motion.div
@@ -24,7 +27,13 @@ export function CharacterCard({ character, index = 0 }: CharacterCardProps) {
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.08 }}
     >
-      <article className="group relative overflow-hidden rounded-2xl border border-border bg-card transition-all duration-300 hover:border-primary/40 hover:shadow-glow">
+      <article
+        className={`group relative overflow-hidden rounded-2xl bg-card transition-all duration-500 ${
+          featured
+            ? "glow-border"
+            : "border border-border hover:border-primary/40 hover:shadow-glow"
+        }`}
+      >
         <Link href={`/character/${character.id}`} className="block">
           <div className="relative aspect-[3/4] overflow-hidden bg-gradient-to-br from-primary/20 to-accent/10">
             {isDicebear ? (
@@ -44,11 +53,14 @@ export function CharacterCard({ character, index = 0 }: CharacterCardProps) {
               />
             )}
             <div className="absolute inset-0 bg-gradient-to-t from-background via-background/20 to-transparent" />
+            <span className="absolute right-3 top-3 text-xl opacity-0 transition-all duration-300 group-hover:opacity-100 group-hover:scale-110 drop-shadow-lg">
+              {hoverIcon === "heart" ? "❤️" : "✨"}
+            </span>
             <div className="absolute bottom-0 left-0 right-0 p-4 transition-opacity duration-300 group-hover:opacity-0">
               <Badge variant="secondary" className="mb-2 capitalize">
                 {character.genre}
               </Badge>
-              <h3 className="font-display text-lg font-bold text-foreground">
+              <h3 className="font-character text-xl font-semibold italic tracking-wide text-foreground">
                 {character.name}
               </h3>
               <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">

@@ -61,3 +61,9 @@ export interface UserProfile {
   mana: number;
   createdAt: string;
 }
+
+export interface AuthUser {
+  id: string;
+  email: string;
+  name: string | null;
+}

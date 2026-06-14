@@ -3,10 +3,11 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
-import { Sparkles, Zap } from "lucide-react";
+import { BookOpen, Sparkles, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useAuthStore } from "@/lib/auth-store";
 import { useChatStore } from "@/lib/store";
-import { cn } from "@/lib/utils";
+import { cn, getCharacterAvatarUrl } from "@/lib/utils";
 
 const navLinks = [
   { href: "/explore", label: "Explore" },
@@ -17,9 +18,15 @@ const navLinks = [
 export function Navbar() {
   const pathname = usePathname();
   const mana = useChatStore((s) => s.mana);
+  const { user, token, isHydrated, logout } = useAuthStore();
   const isChat = pathname?.startsWith("/chat");
+  const isLoggedIn = Boolean(token && user);
 
   if (isChat) return null;
+
+  const avatarUrl = user
+    ? getCharacterAvatarUrl({ name: user.name ?? user.email, imageUrl: null })
+    : null;
 
   return (
     <motion.nav
@@ -58,16 +65,49 @@ export function Navbar() {
           <div className="flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-3 py-1.5">
             <Zap className="h-4 w-4 text-accent" />
             <span className="text-sm font-semibold text-accent">{mana}</span>
-            <span className="text-xs text-muted-foreground">Mana</span>
+            <span className="text-xs text-muted-foreground hidden sm:inline">
+              Mana
+            </span>
           </div>
-          <Link href="/login">
-            <Button variant="ghost" size="sm">
-              Sign In
-            </Button>
-          </Link>
-          <Link href="/register">
-            <Button size="sm">Get Started</Button>
-          </Link>
+
+          {isHydrated && isLoggedIn ? (
+            <div className="flex items-center gap-3">
+              <Link
+                href="/dashboard"
+                className="hidden sm:flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground hover:bg-muted"
+              >
+                <BookOpen className="h-4 w-4" />
+                My Stories
+              </Link>
+              <div
+                className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border border-primary/30"
+                title={user?.name ?? user?.email ?? "Account"}
+              >
+                {avatarUrl && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={avatarUrl}
+                    alt={user?.name ?? "User avatar"}
+                    className="h-full w-full object-cover"
+                  />
+                )}
+              </div>
+              <Button variant="ghost" size="sm" onClick={logout}>
+                Log out
+              </Button>
+            </div>
+          ) : (
+            <>
+              <Link href="/login">
+                <Button variant="ghost" size="sm">
+                  Sign In
+                </Button>
+              </Link>
+              <Link href="/register">
+                <Button size="sm">Get Started</Button>
+              </Link>
+            </>
+          )}
         </div>
       </div>
     </motion.nav>

@@ -1,18 +1,65 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import Image from "next/image";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { ArrowLeft, MessageCircle } from "lucide-react";
+import { ArrowLeft, Loader2, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { getCharacterById } from "@/lib/mock-data";
+import { getCharacterById as getCharacterByIdFromApi } from "@/lib/api";
+import { getCharacterById as getCharacterByIdFromMock } from "@/lib/mock-data";
+import {
+  createMockConversationId,
+  saveChatCharacter,
+} from "@/lib/chat-storage";
+import { getCharacterAvatarUrl } from "@/lib/utils";
+import type { Character } from "@/lib/types";
 
 export default function CharacterDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const character = getCharacterById(params.id as string);
+  const characterId = params.id as string;
+  const [character, setCharacter] = useState<Character | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadCharacter() {
+      setLoading(true);
+      try {
+        const fromApi = await getCharacterByIdFromApi(characterId);
+        if (!cancelled && fromApi) {
+          setCharacter(fromApi);
+          return;
+        }
+      } catch {
+        // fall back to local mock data
+      }
+
+      if (!cancelled) {
+        setCharacter(getCharacterByIdFromMock(characterId) ?? null);
+      }
+    }
+
+    loadCharacter().finally(() => {
+      if (!cancelled) setLoading(false);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [characterId]);
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center gap-3">
+        <Loader2 className="h-8 w-8 animate-spin text-accent" />
+        <p className="text-muted-foreground">Loading character...</p>
+      </div>
+    );
+  }
 
   if (!character) {
     return (
@@ -22,15 +69,13 @@ export default function CharacterDetailPage() {
     );
   }
 
-  const startStory = async () => {
-    const res = await fetch("/api/conversations", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ characterId: character.id }),
-    });
-    const data = await res.json();
-    router.push(`/chat/${data.id}`);
+  const startStory = () => {
+    const conversationId = createMockConversationId(character.id);
+    saveChatCharacter(conversationId, character);
+    router.push(`/chat/${conversationId}`);
   };
+
+  const avatarUrl = getCharacterAvatarUrl(character);
 
   return (
     <div className="min-h-screen px-4 py-10 sm:px-6">
@@ -48,16 +93,13 @@ export default function CharacterDetailPage() {
           animate={{ opacity: 1, y: 0 }}
           className="grid gap-8 md:grid-cols-2"
         >
-          <div className="relative aspect-[3/4] overflow-hidden rounded-2xl border border-border">
-            {character.imageUrl && (
-              <Image
-                src={character.imageUrl}
-                alt={character.name}
-                fill
-                className="object-cover"
-                priority
-              />
-            )}
+          <div className="relative aspect-[3/4] overflow-hidden rounded-2xl border border-primary/20 shadow-glow">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={avatarUrl}
+              alt={character.name}
+              className="absolute inset-0 h-full w-full object-cover"
+            />
             <div className="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent" />
           </div>
 
@@ -65,9 +107,12 @@ export default function CharacterDetailPage() {
             <Badge variant="secondary" className="w-fit capitalize mb-3">
               {character.genre}
             </Badge>
-            <h1 className="font-display text-4xl font-bold">
+            <h1 className="font-character text-4xl font-semibold italic tracking-wide">
               {character.name}
             </h1>
+            <p className="mt-1 text-sm italic text-accent/90">
+              Waiting just for you...
+            </p>
             <p className="mt-4 text-muted-foreground leading-relaxed">
               {character.description}
             </p>

@@ -1,170 +1,338 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { motion } from "framer-motion";
-import { ArrowRight, BookOpen, MessageCircle, Sparkles, Wand2 } from "lucide-react";
+import { motion, useInView } from "framer-motion";
+import { useRef } from "react";
+import {
+  ArrowRight,
+  Compass,
+  MessageSquare,
+  PenLine,
+  Sparkles,
+  Users,
+  Globe,
+  BookOpen,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CharacterCard } from "@/components/characters/CharacterCard";
-import { WorldCard } from "@/components/worlds/WorldCard";
-import { MOCK_CHARACTERS, MOCK_WORLDS } from "@/lib/mock-data";
+import { FloatingParticles } from "@/components/landing/FloatingParticles";
+import { Footer } from "@/components/landing/Footer";
+import { getCharacters } from "@/lib/api";
+import { MOCK_CHARACTERS } from "@/lib/mock-data";
+import type { Character } from "@/lib/types";
 
-const features = [
+const stats = [
+  { value: "10,000+", label: "Stories Created", icon: BookOpen },
+  { value: "500+", label: "Characters", icon: Users },
+  { value: "50+", label: "Worlds", icon: Globe },
+];
+
+const steps = [
   {
-    icon: MessageCircle,
-    title: "Living Characters",
+    step: "01",
+    icon: Compass,
+    title: "Choose a Character",
     description:
-      "AI characters with unique personalities, memories, and evolving relationships.",
+      "Browse hundreds of AI characters — from elven sorceresses to starship captains — each with unique personalities and memories.",
   },
   {
-    icon: BookOpen,
-    title: "Branching Stories",
+    step: "02",
+    icon: MessageSquare,
+    title: "Start Your Story",
     description:
-      "Every choice shapes the narrative. No two adventures are the same.",
+      "Jump into an immersive chat adventure. Every message shapes the narrative in real time with streaming AI responses.",
   },
   {
-    icon: Wand2,
-    title: "Create Your World",
+    step: "03",
+    icon: PenLine,
+    title: "Shape the Narrative",
     description:
-      "Design characters and worlds, share them publicly, and build your audience.",
+      "Your choices matter. Characters remember you, storylines branch, and no two adventures are ever the same.",
   },
 ];
 
+function AnimatedCounter({
+  value,
+  label,
+  icon: Icon,
+  index,
+}: {
+  value: string;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  index: number;
+}) {
+  const ref = useRef(null);
+  const isInView = useInView(ref, { once: true, margin: "-80px" });
+
+  return (
+    <motion.div
+      ref={ref}
+      initial={{ opacity: 0, y: 30 }}
+      animate={isInView ? { opacity: 1, y: 0 } : {}}
+      transition={{ duration: 0.6, delay: index * 0.15, ease: "easeOut" }}
+      className="group relative overflow-hidden rounded-2xl border border-border/50 bg-card/50 p-8 text-center backdrop-blur-sm transition-all duration-500 hover:border-primary/40 hover:shadow-glow"
+    >
+      <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
+      <motion.div
+        initial={{ scale: 0.8, opacity: 0 }}
+        animate={isInView ? { scale: 1, opacity: 1 } : {}}
+        transition={{ duration: 0.5, delay: index * 0.15 + 0.2 }}
+        className="relative mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/15 ring-1 ring-primary/20"
+      >
+        <Icon className="h-7 w-7 text-accent" />
+      </motion.div>
+      <p className="relative font-display text-4xl font-bold text-gradient sm:text-5xl">
+        {value}
+      </p>
+      <p className="relative mt-2 text-sm font-medium text-muted-foreground">
+        {label}
+      </p>
+    </motion.div>
+  );
+}
+
+function StepCard({
+  step,
+  icon: Icon,
+  title,
+  description,
+  index,
+}: (typeof steps)[0] & { index: number }) {
+  const ref = useRef(null);
+  const isInView = useInView(ref, { once: true, margin: "-60px" });
+
+  return (
+    <motion.div
+      ref={ref}
+      initial={{ opacity: 0, y: 40 }}
+      animate={isInView ? { opacity: 1, y: 0 } : {}}
+      transition={{ duration: 0.7, delay: index * 0.15, ease: "easeOut" }}
+      className="group relative"
+    >
+      <div className="relative overflow-hidden rounded-2xl border border-border/50 bg-card/40 p-8 backdrop-blur-sm transition-all duration-500 hover:border-primary/30 hover:shadow-glow">
+        <span className="absolute right-6 top-6 font-display text-5xl font-bold text-primary/10 transition-colors duration-500 group-hover:text-primary/20">
+          {step}
+        </span>
+        <motion.div
+          whileHover={{ scale: 1.08, rotate: 3 }}
+          transition={{ type: "spring", stiffness: 300, damping: 15 }}
+          className="mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-primary/25 to-accent/10 ring-1 ring-primary/30"
+        >
+          <Icon className="h-8 w-8 text-accent" />
+        </motion.div>
+        <h3 className="font-display text-xl font-semibold">{title}</h3>
+        <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+          {description}
+        </p>
+      </div>
+      {index < steps.length - 1 && (
+        <div className="absolute -right-4 top-1/2 hidden h-px w-8 bg-gradient-to-r from-primary/40 to-transparent lg:block" />
+      )}
+    </motion.div>
+  );
+}
+
 export default function LandingPage() {
-  const featuredCharacters = MOCK_CHARACTERS.slice(0, 4);
-  const featuredWorlds = MOCK_WORLDS.slice(0, 2);
+  const [characters, setCharacters] = useState<Character[]>([]);
+
+  useEffect(() => {
+    getCharacters()
+      .then((data) => setCharacters(data.slice(0, 4)))
+      .catch(() => setCharacters(MOCK_CHARACTERS.slice(0, 4)));
+  }, []);
+
+  const featuredCharacters =
+    characters.length > 0 ? characters : MOCK_CHARACTERS.slice(0, 4);
 
   return (
     <div className="min-h-screen">
-      <section className="relative overflow-hidden px-4 py-24 sm:px-6 sm:py-32">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-primary/20 via-background to-background" />
-        <div className="absolute top-1/4 left-1/4 h-96 w-96 rounded-full bg-primary/10 blur-3xl" />
-        <div className="absolute bottom-1/4 right-1/4 h-96 w-96 rounded-full bg-accent/10 blur-3xl" />
+      {/* Hero */}
+      <section className="relative min-h-[90vh] overflow-hidden flex items-center px-4 py-24 sm:px-6">
+        <FloatingParticles />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-primary/25 via-background to-background" />
+        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 h-[500px] w-[800px] rounded-full bg-primary/10 blur-[120px]" />
+        <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-background to-transparent" />
 
-        <div className="relative mx-auto max-w-4xl text-center">
+        <div className="relative mx-auto max-w-5xl text-center">
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
+            transition={{ duration: 0.8, ease: "easeOut" }}
           >
-            <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-4 py-1.5 text-sm text-accent">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+              className="mb-8 inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-5 py-2 text-sm text-accent backdrop-blur-sm"
+            >
               <Sparkles className="h-4 w-4" />
               AI-Powered Interactive Fiction
-            </div>
-            <h1 className="font-display text-5xl font-bold leading-tight sm:text-7xl">
+            </motion.div>
+
+            <motion.h1
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.3 }}
+              className="font-display text-5xl font-bold leading-[1.1] tracking-tight sm:text-7xl lg:text-8xl"
+            >
               Every Story
               <br />
               <span className="text-gradient">Begins With You</span>
-            </h1>
-            <p className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground">
+            </motion.h1>
+
+            <motion.p
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.45 }}
+              className="mx-auto mt-8 max-w-2xl text-lg text-muted-foreground sm:text-xl leading-relaxed"
+            >
               Step into worlds of fantasy, sci-fi, romance, and horror. Chat with
               AI characters who remember you, react to your choices, and weave
               stories only you can tell.
-            </p>
-            <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
+            </motion.p>
+
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.6 }}
+              className="mt-12 flex flex-col items-center justify-center gap-4 sm:flex-row"
+            >
               <Link href="/explore">
-                <Button size="lg" className="gap-2">
+                <Button size="lg" className="gap-2 px-8 text-base shadow-glow-lg">
                   Start Exploring
                   <ArrowRight className="h-4 w-4" />
                 </Button>
               </Link>
               <Link href="/create/character">
-                <Button variant="secondary" size="lg">
+                <Button variant="secondary" size="lg" className="px-8 text-base">
                   Create a Character
                 </Button>
               </Link>
-            </div>
+            </motion.div>
           </motion.div>
         </div>
       </section>
 
-      <section className="border-y border-border bg-card/30 px-4 py-20 sm:px-6">
-        <div className="mx-auto max-w-7xl">
-          <h2 className="mb-12 text-center font-display text-3xl font-bold">
-            How It Works
-          </h2>
-          <div className="grid gap-8 md:grid-cols-3">
-            {features.map((feature, i) => (
-              <motion.div
-                key={feature.title}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: i * 0.1 }}
-                className="rounded-2xl border border-border bg-card p-6 text-center hover:border-primary/30 hover:shadow-glow transition-all"
-              >
-                <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-primary/20">
-                  <feature.icon className="h-6 w-6 text-accent" />
-                </div>
-                <h3 className="font-display text-lg font-semibold">
-                  {feature.title}
-                </h3>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  {feature.description}
-                </p>
-              </motion.div>
+      {/* Stats */}
+      <section className="relative px-4 py-20 sm:px-6">
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-primary/5 to-transparent" />
+        <div className="relative mx-auto max-w-5xl">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+            className="mb-12 text-center"
+          >
+            <h2 className="font-display text-3xl font-bold sm:text-4xl">
+              A Universe of Stories
+            </h2>
+            <p className="mt-3 text-muted-foreground">
+              Join a growing community of storytellers and adventurers
+            </p>
+          </motion.div>
+          <div className="grid gap-6 sm:grid-cols-3">
+            {stats.map((stat, i) => (
+              <AnimatedCounter key={stat.label} {...stat} index={i} />
             ))}
           </div>
         </div>
       </section>
 
-      <section className="px-4 py-20 sm:px-6">
+      {/* How It Works */}
+      <section className="border-y border-border/50 bg-card/20 px-4 py-24 sm:px-6">
         <div className="mx-auto max-w-7xl">
-          <div className="mb-8 flex items-center justify-between">
-            <h2 className="font-display text-3xl font-bold">
-              Featured Characters
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+            className="mb-16 text-center"
+          >
+            <p className="mb-3 text-sm font-medium uppercase tracking-widest text-accent">
+              Simple as 1-2-3
+            </p>
+            <h2 className="font-display text-3xl font-bold sm:text-4xl">
+              How It Works
             </h2>
+            <p className="mx-auto mt-4 max-w-xl text-muted-foreground">
+              From first message to epic saga — your adventure starts in seconds
+            </p>
+          </motion.div>
+          <div className="grid gap-8 md:grid-cols-3">
+            {steps.map((step, i) => (
+              <StepCard key={step.step} {...step} index={i} />
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Featured Characters */}
+      <section className="px-4 py-24 sm:px-6">
+        <div className="mx-auto max-w-7xl">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+            className="mb-12 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-end"
+          >
+            <div>
+              <p className="mb-2 text-sm font-medium uppercase tracking-widest text-accent">
+                Meet the Cast
+              </p>
+              <h2 className="font-display text-3xl font-bold sm:text-4xl">
+                Featured Characters
+              </h2>
+            </div>
             <Link
               href="/explore"
-              className="text-sm text-accent hover:underline"
+              className="group flex items-center gap-1 text-sm text-accent transition-colors hover:text-accent/80"
             >
-              View all →
+              View all characters
+              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
             </Link>
-          </div>
-          <div className="masonry-grid">
+          </motion.div>
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
             {featuredCharacters.map((char, i) => (
-              <div key={char.id} className="masonry-item">
-                <CharacterCard character={char} index={i} />
-              </div>
+              <CharacterCard key={char.id} character={char} index={i} featured />
             ))}
           </div>
         </div>
       </section>
 
-      <section className="bg-card/30 px-4 py-20 sm:px-6">
-        <div className="mx-auto max-w-7xl">
-          <div className="mb-8 flex items-center justify-between">
-            <h2 className="font-display text-3xl font-bold">Featured Worlds</h2>
-            <Link
-              href="/explore?tab=worlds"
-              className="text-sm text-accent hover:underline"
-            >
-              View all →
+      {/* CTA */}
+      <section className="px-4 py-24 sm:px-6">
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.7 }}
+          className="relative mx-auto max-w-4xl overflow-hidden rounded-3xl border border-primary/30 p-12 text-center sm:p-16"
+        >
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/15 via-accent/5 to-background" />
+          <FloatingParticles />
+          <div className="relative">
+            <h2 className="font-display text-3xl font-bold sm:text-4xl">
+              Ready to Write Your Story?
+            </h2>
+            <p className="mx-auto mt-4 max-w-lg text-muted-foreground">
+              Join thousands of storytellers. Start with 100 free Mana — enough
+              for 100 AI responses.
+            </p>
+            <Link href="/register">
+              <Button size="lg" className="mt-8 gap-2 px-10 shadow-glow-lg">
+                Get Started Free
+                <ArrowRight className="h-4 w-4" />
+              </Button>
             </Link>
           </div>
-          <div className="grid gap-6 md:grid-cols-2">
-            {featuredWorlds.map((world, i) => (
-              <WorldCard key={world.id} world={world} index={i} />
-            ))}
-          </div>
-        </div>
+        </motion.div>
       </section>
 
-      <section className="px-4 py-24 sm:px-6">
-        <div className="mx-auto max-w-3xl rounded-3xl border border-primary/30 bg-gradient-to-br from-primary/10 to-accent/5 p-12 text-center shadow-glow">
-          <h2 className="font-display text-3xl font-bold">
-            Ready to Write Your Story?
-          </h2>
-          <p className="mt-4 text-muted-foreground">
-            Join thousands of storytellers. Start with 100 free Mana — enough for
-            100 AI responses.
-          </p>
-          <Link href="/register">
-            <Button size="lg" className="mt-8">
-              Get Started Free
-            </Button>
-          </Link>
-        </div>
-      </section>
+      <Footer />
     </div>
   );
 }

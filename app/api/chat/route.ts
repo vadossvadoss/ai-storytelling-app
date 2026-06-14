@@ -4,6 +4,7 @@ import {
   extractMemory,
   getMockStreamResponse,
 } from "@/lib/claude";
+import { delayBeforeToken } from "@/lib/typing-delay";
 import { getTopMemories, saveMemory } from "@/lib/memory";
 import {
   getCharacterById,
@@ -41,8 +42,8 @@ export async function POST(req: Request) {
       async start(controller) {
         const words = mockResponse.split(" ");
         for (const word of words) {
+          await delayBeforeToken(word + " ");
           controller.enqueue(encoder.encode(word + " "));
-          await new Promise((r) => setTimeout(r, 40));
         }
         controller.close();
         extractMemory(message, mockResponse, character.name).then((mem) => {
@@ -72,6 +73,7 @@ export async function POST(req: Request) {
           ) {
             const text = event.delta.text;
             fullResponse += text;
+            await delayBeforeToken(text);
             controller.enqueue(encoder.encode(text));
           }
         }

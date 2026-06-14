@@ -33,6 +33,7 @@ const config: Config = {
       fontFamily: {
         sans: ["var(--font-inter)", "system-ui", "sans-serif"],
         display: ["var(--font-cinzel)", "serif"],
+        character: ["var(--font-character)", "var(--font-cinzel)", "serif"],
       },
       animation: {
         "pulse-slow": "pulse 2.5s cubic-bezier(0.4, 0, 0.6, 1) infinite",

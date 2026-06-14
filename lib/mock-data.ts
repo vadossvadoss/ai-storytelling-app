@@ -109,7 +109,7 @@ export const MOCK_WORLDS: World[] = [
     description:
       "An ancient forest where trees remember every secret ever spoken beneath their canopy. Magic flows through the roots, and time moves differently at its heart.",
     imageUrl:
-      "https://images.unsplash.com/photo-1448375240586-882707db888b?w=600&h=400&fit=crop",
+      "https://images.unsplash.com/photo-1448375240586-882707db888b?w=800&h=400&fit=crop",
     authorId: "user-1",
     isPublic: true,
     characterIds: ["char-1", "char-5"],
@@ -121,7 +121,7 @@ export const MOCK_WORLDS: World[] = [
     description:
       "The outer rim of colonized space, where frontier stations cling to asteroids and unknown signals pulse from the void between stars.",
     imageUrl:
-      "https://images.unsplash.com/photo-1419242902214-272b3f66ee7a?w=600&h=400&fit=crop",
+      "https://images.unsplash.com/photo-1462331940025-496dfbfc7564?w=800&h=400&fit=crop",
     authorId: "user-2",
     isPublic: true,
     characterIds: ["char-2", "char-6"],
@@ -133,7 +133,7 @@ export const MOCK_WORLDS: World[] = [
     description:
       "A gothic kingdom ruled by immortal nobles, where candlelit ballrooms hide centuries of blood feuds and forbidden romance.",
     imageUrl:
-      "https://images.unsplash.com/photo-1518709268805-4e9042af9f83?w=600&h=400&fit=crop",
+      "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=800&h=400&fit=crop",
     authorId: "user-3",
     isPublic: true,
     characterIds: ["char-3"],

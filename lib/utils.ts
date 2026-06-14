@@ -14,3 +14,10 @@ export function getCharacterAvatarUrl(character: {
   const seed = character.name.split(/\s+/)[0] ?? character.name;
   return `https://api.dicebear.com/7.x/personas/svg?seed=${encodeURIComponent(seed)}`;
 }
+
+export function getFirstSentence(text: string): string {
+  const match = text.match(/^[^.!?]+[.!?]?/);
+  return match ? match[0].trim() : text;
+}
+
+export { buildWelcomeMessage } from "./anime";

@@ -1,8 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import Image from "next/image";
-import { cn } from "@/lib/utils";
+import { cn, getCharacterAvatarUrl } from "@/lib/utils";
 
 interface MessageBubbleProps {
   role: "user" | "assistant";
@@ -18,36 +17,40 @@ export function MessageBubble({
   characterImage,
 }: MessageBubbleProps) {
   const isUser = role === "user";
+  const avatarUrl =
+    characterName && !isUser
+      ? getCharacterAvatarUrl({
+          name: characterName,
+          imageUrl: characterImage ?? null,
+        })
+      : null;
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      className={cn("flex gap-3", isUser ? "flex-row-reverse" : "flex-row")}
+      transition={{ duration: 0.3, ease: "easeOut" }}
+      className={cn(
+        "flex gap-3",
+        isUser ? "flex-row-reverse ml-auto max-w-[85%]" : "flex-row max-w-[85%]"
+      )}
     >
-      {!isUser && (
-        <div className="flex-shrink-0">
-          {characterImage ? (
-            <Image
-              src={characterImage}
-              alt={characterName ?? "Character"}
-              width={36}
-              height={36}
-              className="rounded-full border border-primary/30 object-cover"
-            />
-          ) : (
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/20 text-sm font-bold text-accent">
-              {characterName?.[0] ?? "?"}
-            </div>
-          )}
+      {!isUser && avatarUrl && (
+        <div className="flex-shrink-0 pt-1">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={avatarUrl}
+            alt={characterName ?? "Character"}
+            className="h-9 w-9 rounded-full border border-primary/30 object-cover shadow-sm"
+          />
         </div>
       )}
       <div
         className={cn(
-          "max-w-[75%] rounded-2xl px-4 py-3 text-sm leading-relaxed",
+          "rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-sm",
           isUser
-            ? "bg-primary text-primary-foreground rounded-tr-sm"
-            : "bg-card border border-border text-foreground rounded-tl-sm"
+            ? "rounded-tr-md bg-primary text-primary-foreground shadow-primary/20"
+            : "rounded-tl-md border border-border/80 bg-card text-foreground"
         )}
       >
         <p className="whitespace-pre-wrap">{content}</p>
