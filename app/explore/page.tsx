@@ -138,7 +138,7 @@ export default function ExplorePage() {
               <div className="py-12 text-center">
                 <p className="text-red-400">{error}</p>
                 <p className="mt-2 text-sm text-muted-foreground">
-                  Make sure the backend is running on http://localhost:4000
+                  Make sure the backend is running and reachable
                 </p>
               </div>
             ) : (

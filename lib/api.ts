@@ -1,8 +1,8 @@
 import type { Character, Conversation, AuthUser } from "./types";
 import { getStoredToken } from "./auth-store";
+import { getApiBaseUrl } from "./api-config";
 
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
+const API_BASE = getApiBaseUrl();
 
 interface BackendCharacter {
   id: string;
