@@ -3,23 +3,21 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 model User {
-  id            String         @id @default(cuid())
-  email         String         @unique
-  name          String?
-  avatar        String?
-  mana          Int            @default(100)
-  createdAt     DateTime       @default(now())
-  characters    Character[]
-  worlds        World[]
-  conversations Conversation[]
-  memories      Memory[]
-  accounts      Account[]
-  sessions      Session[]
+  id           String    @id @default(cuid())
+  email        String    @unique
+  name         String?
+  passwordHash String?
+  googleId     String?   @unique @map("google_id")
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  accounts     Account[]
+  sessions     Session[]
 }
 
 model Account {
@@ -56,66 +54,62 @@ model VerificationToken {
   @@unique([identifier, token])
 }
 
+// Backend-managed tables: @@ignore keeps them out of the Prisma Client
+// and prevents `db push` from dropping shared Supabase tables.
 model Character {
-  id           String         @id @default(cuid())
-  name         String
-  description  String
-  systemPrompt String         @db.Text
-  imageUrl     String?
-  authorId     String
-  isPublic     Boolean        @default(true)
-  genre        String
-  tags         String[]
-  createdAt    DateTime       @default(now())
-  author       User           @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  id            String         @id @default(cuid())
+  name          String
+  description   String
+  systemPrompt  String         @map("system_prompt") @db.Text
+  imageUrl      String?        @map("image_url")
+  genre         String         @default("fantasy")
+  tags          String[]       @default([])
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
   conversations Conversation[]
-  memories     Memory[]
-  worlds       World[]        @relation("WorldCharacters")
-}
 
-model World {
-  id          String      @id @default(cuid())
-  name        String
-  description String
-  imageUrl    String?
-  authorId    String
-  isPublic    Boolean     @default(true)
-  createdAt   DateTime    @default(now())
-  author      User        @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  characters  Character[] @relation("WorldCharacters")
-  conversations Conversation[]
+  @@ignore
 }
 
 model Conversation {
   id          String    @id @default(cuid())
+  title       String
   userId      String
   characterId String
-  worldId     String?
-  title       String
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   character   Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
-  world       World?    @relation(fields: [worldId], references: [id], onDelete: SetNull)
   messages    Message[]
+
+  @@index([userId])
+  @@index([characterId])
+  @@ignore
 }
 
 model Message {
   id             String       @id @default(cuid())
   conversationId String
-  role           String
-  content        String       @db.Text
+  role           MessageRole
+  content        String
   createdAt      DateTime     @default(now())
   conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId])
+  @@ignore
 }
 
 model Memory {
-  id          String    @id @default(cuid())
-  characterId String
-  userId      String
-  content     String    @db.Text
-  importance  Int
-  createdAt   DateTime  @default(now())
-  character   Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id        String   @id @default(cuid())
+  userId    String
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@ignore
+}
+
+enum MessageRole {
+  USER
+  ASSISTANT
 }

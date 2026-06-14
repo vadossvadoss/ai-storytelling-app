@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { signOut, useSession } from "next-auth/react";
 import { motion } from "framer-motion";
 import { BookOpen, Sparkles, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -19,8 +20,16 @@ export function Navbar() {
   const pathname = usePathname();
   const mana = useChatStore((s) => s.mana);
   const { user, token, isHydrated, logout } = useAuthStore();
+  const { data: session } = useSession();
   const isChat = pathname?.startsWith("/chat");
   const isLoggedIn = Boolean(token && user);
+
+  const handleLogout = () => {
+    logout();
+    if (session) {
+      signOut({ redirect: false });
+    }
+  };
 
   if (isChat) return null;
 
@@ -92,7 +101,7 @@ export function Navbar() {
                   />
                 )}
               </div>
-              <Button variant="ghost" size="sm" onClick={logout}>
+              <Button variant="ghost" size="sm" onClick={handleLogout}>
                 Log out
               </Button>
             </div>
