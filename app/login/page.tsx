@@ -41,10 +41,22 @@ function LoginPageContent() {
   const [loading, setLoading] = useState(false);
 
   const callbackUrl = searchParams.get("callbackUrl") ?? "/explore";
+  const oauthError = searchParams.get("error");
+
+  const oauthErrorMessage =
+    oauthError === "Callback"
+      ? "Google sign-in failed. Please try again or use email/password."
+      : oauthError === "OAuthAccountNotLinked"
+        ? "This email is already registered. Sign in with email/password, or try Google again."
+        : oauthError
+          ? `Sign-in error: ${oauthError}`
+          : null;
 
   // After Google OAuth NextAuth may land here — redirect once Express JWT is ready
   useEffect(() => {
     if (sessionStatus === "loading") return;
+
+    if (oauthError) return;
 
     if (sessionStatus === "authenticated") {
       console.log("[login] NextAuth authenticated, token in Zustand:", Boolean(token));
@@ -58,7 +70,7 @@ function LoginPageContent() {
         router.replace(callbackUrl);
       }
     }
-  }, [sessionStatus, session, token, setAuth, router, callbackUrl]);
+  }, [sessionStatus, session, token, setAuth, router, callbackUrl, oauthError]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -107,6 +119,10 @@ function LoginPageContent() {
             <CardTitle>Sign In</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
+            {oauthErrorMessage && (
+              <p className="text-sm text-red-400 text-center">{oauthErrorMessage}</p>
+            )}
+
             <GoogleSignInButton label="Sign in with Google" disabled={loading} />
 
             <div className="relative">

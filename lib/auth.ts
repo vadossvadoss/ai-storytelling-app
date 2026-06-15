@@ -1,9 +1,7 @@
 import { NextAuthOptions } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import EmailProvider from "next-auth/providers/email";
-import { PrismaAdapter } from "@auth/prisma-adapter";
 import { getApiBaseUrl } from "./api-config";
-import { prisma } from "./prisma";
 
 async function exchangeGoogleForExpressJwt(
   email: string,
@@ -39,7 +37,6 @@ async function exchangeGoogleForExpressJwt(
 }
 
 export const authOptions: NextAuthOptions = {
-  adapter: PrismaAdapter(prisma) as NextAuthOptions["adapter"],
   providers: [
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID!,
