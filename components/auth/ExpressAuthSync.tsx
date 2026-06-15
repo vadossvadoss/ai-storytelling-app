@@ -24,11 +24,12 @@ export function ExpressAuthSync({ children }: { children: React.ReactNode }) {
 
     async function sync() {
       if (syncingRef.current) return;
+      if (!session) return;
       syncingRef.current = true;
 
       try {
         // Fast path: Express JWT already in NextAuth session (server jwt callback)
-        if (session.expressToken && session.expressUser) {
+        if (session && session.expressToken && session.expressUser) {
           if (token !== session.expressToken) {
             console.log("[ExpressAuthSync] syncing expressToken from session → Zustand");
             setAuth(session.expressUser, session.expressToken);
