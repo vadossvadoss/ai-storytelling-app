@@ -1,6 +1,17 @@
 import { NextAuthOptions } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import { getApiBaseUrl } from "./api-config";
+import { ensureAuthEnv } from "./auth-env";
+
+ensureAuthEnv();
+
+function requireEnv(name: string): string {
+  const value = process.env[name];
+  if (!value) {
+    console.error(`[auth] Missing required env: ${name}`);
+  }
+  return value ?? "";
+}
 
 async function exchangeGoogleForExpressJwt(
   email: string,
@@ -36,11 +47,11 @@ async function exchangeGoogleForExpressJwt(
 }
 
 export const authOptions: NextAuthOptions = {
-  secret: process.env.NEXTAUTH_SECRET,
+  secret: requireEnv("NEXTAUTH_SECRET"),
   providers: [
     GoogleProvider({
-      clientId: process.env.GOOGLE_CLIENT_ID!,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+      clientId: requireEnv("GOOGLE_CLIENT_ID"),
+      clientSecret: requireEnv("GOOGLE_CLIENT_SECRET"),
       allowDangerousEmailAccountLinking: true,
     }),
   ],
