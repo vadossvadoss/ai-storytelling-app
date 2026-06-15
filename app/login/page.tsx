@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { motion } from "framer-motion";
 import { Loader2, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -15,11 +16,34 @@ import { useAuthStore } from "@/lib/auth-store";
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const { data: session, status: sessionStatus } = useSession();
   const setAuth = useAuthStore((s) => s.setAuth);
+  const token = useAuthStore((s) => s.token);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  const callbackUrl = searchParams.get("callbackUrl") ?? "/explore";
+
+  // After Google OAuth NextAuth may land here — redirect once Express JWT is ready
+  useEffect(() => {
+    if (sessionStatus === "loading") return;
+
+    if (sessionStatus === "authenticated") {
+      console.log("[login] NextAuth authenticated, token in Zustand:", Boolean(token));
+
+      if (session?.expressToken && session.expressUser && !token) {
+        setAuth(session.expressUser, session.expressToken);
+      }
+
+      if (token || session?.expressToken) {
+        console.log("[login] redirecting to", callbackUrl);
+        router.replace(callbackUrl);
+      }
+    }
+  }, [sessionStatus, session, token, setAuth, router, callbackUrl]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,6 +60,15 @@ export default function LoginPage() {
       setLoading(false);
     }
   };
+
+  if (sessionStatus === "loading" || (sessionStatus === "authenticated" && !token)) {
+    return (
+      <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center gap-3">
+        <Loader2 className="h-8 w-8 animate-spin text-accent" />
+        <p className="text-muted-foreground">Completing sign in...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center px-4">

@@ -1,5 +1,5 @@
-import type { Character, Conversation, AuthUser } from "./types";
-import { getStoredToken } from "./auth-store";
+import type { Character, Conversation, AuthUser, Message } from "./types";
+import { getStoredToken, useAuthStore } from "./auth-store";
 import { getApiBaseUrl } from "./api-config";
 
 const API_BASE = getApiBaseUrl();
@@ -67,7 +67,7 @@ function getAuthHeaders(): HeadersInit {
     "Content-Type": "application/json",
   };
 
-  const token = getStoredToken();
+  const token = getStoredToken() ?? useAuthStore.getState().token;
   if (token) {
     headers.Authorization = `Bearer ${token}`;
   }
@@ -121,6 +121,20 @@ export async function register(
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ name, email, password }),
+  });
+  return handleResponse<AuthResponse>(res);
+}
+
+export async function googleAuth(
+  email: string,
+  name: string,
+  googleId: string
+): Promise<AuthResponse> {
+  console.log("[api] POST /api/auth/google (client)", { email, googleId });
+  const res = await fetch(`${API_BASE}/api/auth/google`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, name, googleId }),
   });
   return handleResponse<AuthResponse>(res);
 }
@@ -243,16 +257,55 @@ export async function getConversations(): Promise<Conversation[]> {
 }
 
 export async function createConversation(
-  characterId: string
+  characterId: string,
+  title?: string
 ): Promise<Conversation> {
   const res = await fetch(`${API_BASE}/api/conversations`, {
     method: "POST",
     headers: getAuthHeaders(),
     body: JSON.stringify({
       characterId,
-      title: "New Story",
+      title: title ?? "New Story",
     }),
   });
   const data = await handleResponse<CreateConversationResponse>(res);
   return data.conversation;
+}
+
+interface ConversationMessagesResponse {
+  messages: Array<{
+    id: string;
+    conversationId: string;
+    role: string;
+    content: string;
+    createdAt: string;
+  }>;
+  character: BackendCharacter;
+}
+
+function mapMessage(msg: ConversationMessagesResponse["messages"][0]): Message {
+  return {
+    id: msg.id,
+    conversationId: msg.conversationId,
+    role: msg.role === "USER" || msg.role === "user" ? "user" : "assistant",
+    content: msg.content,
+    createdAt:
+      typeof msg.createdAt === "string"
+        ? msg.createdAt
+        : new Date(msg.createdAt).toISOString(),
+  };
+}
+
+export async function getConversationMessages(
+  conversationId: string
+): Promise<{ messages: Message[]; character: Character }> {
+  const url = `${API_BASE}/api/conversations/${conversationId}/messages`;
+  console.log("[api] GET conversation messages:", url);
+
+  const res = await fetch(url, { headers: getAuthHeaders() });
+  const data = await handleResponse<ConversationMessagesResponse>(res);
+  return {
+    messages: data.messages.map(mapMessage),
+    character: mapCharacter(data.character),
+  };
 }

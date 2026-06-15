@@ -7,12 +7,12 @@ import { motion } from "framer-motion";
 import { ArrowLeft, Loader2, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { getCharacterById as getCharacterByIdFromApi } from "@/lib/api";
-import { getCharacterById as getCharacterByIdFromMock } from "@/lib/mock-data";
 import {
-  createMockConversationId,
-  saveChatCharacter,
-} from "@/lib/chat-storage";
+  createConversation,
+  getCharacterById as getCharacterByIdFromApi,
+} from "@/lib/api";
+import { getCharacterById as getCharacterByIdFromMock } from "@/lib/mock-data";
+import { useAuthStore } from "@/lib/auth-store";
 import { getCharacterAvatarUrl } from "@/lib/utils";
 import type { Character } from "@/lib/types";
 
@@ -20,8 +20,12 @@ export default function CharacterDetailPage() {
   const params = useParams();
   const router = useRouter();
   const characterId = params.id as string;
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const isHydrated = useAuthStore((s) => s.isHydrated);
   const [character, setCharacter] = useState<Character | null>(null);
   const [loading, setLoading] = useState(true);
+  const [starting, setStarting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -52,7 +56,37 @@ export default function CharacterDetailPage() {
     };
   }, [characterId]);
 
-  if (loading) {
+  const startStory = async () => {
+    if (!character) return;
+
+    if (!isAuthenticated()) {
+      router.push(`/login?callbackUrl=/character/${character.id}`);
+      return;
+    }
+
+    setStarting(true);
+    setError(null);
+
+    try {
+      const conversation = await createConversation(
+        character.id,
+        `Story with ${character.name}`
+      );
+      router.push(`/chat/${conversation.id}`);
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Failed to start story";
+      if (message.includes("401") || message.toLowerCase().includes("authorization")) {
+        router.push(`/login?callbackUrl=/character/${character.id}`);
+        return;
+      }
+      setError(message);
+    } finally {
+      setStarting(false);
+    }
+  };
+
+  if (loading || !isHydrated) {
     return (
       <div className="flex min-h-screen items-center justify-center gap-3">
         <Loader2 className="h-8 w-8 animate-spin text-accent" />
@@ -68,12 +102,6 @@ export default function CharacterDetailPage() {
       </div>
     );
   }
-
-  const startStory = () => {
-    const conversationId = createMockConversationId(character.id);
-    saveChatCharacter(conversationId, character);
-    router.push(`/chat/${conversationId}`);
-  };
 
   const avatarUrl = getCharacterAvatarUrl(character);
 
@@ -123,9 +151,28 @@ export default function CharacterDetailPage() {
                 </Badge>
               ))}
             </div>
-            <Button size="lg" className="mt-8 gap-2" onClick={startStory}>
-              <MessageCircle className="h-5 w-5" />
-              Start Story
+
+            {error && (
+              <p className="mt-4 text-sm text-red-400 text-center">{error}</p>
+            )}
+
+            <Button
+              size="lg"
+              className="mt-8 gap-2"
+              onClick={startStory}
+              disabled={starting}
+            >
+              {starting ? (
+                <>
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                  Starting...
+                </>
+              ) : (
+                <>
+                  <MessageCircle className="h-5 w-5" />
+                  Start Story
+                </>
+              )}
             </Button>
           </div>
         </motion.div>
