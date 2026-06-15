@@ -2,29 +2,36 @@ import { NextAuthOptions } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import EmailProvider from "next-auth/providers/email";
 import { PrismaAdapter } from "@auth/prisma-adapter";
+import { getApiBaseUrl } from "./api-config";
 import { prisma } from "./prisma";
-
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
 
 async function exchangeGoogleForExpressJwt(
   email: string,
   name: string,
   googleId: string
 ): Promise<{ token: string; user: { id: string; email: string; name: string | null } } | null> {
+  const url = `${getApiBaseUrl()}/api/auth/google`;
+  console.log("[auth] POST /api/auth/google →", url, { email, name, googleId });
+
   try {
-    const res = await fetch(`${API_BASE}/api/auth/google`, {
+    const res = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, name, googleId }),
     });
 
+    const text = await res.text();
     if (!res.ok) {
-      console.error("[auth] Express /api/auth/google failed:", res.status, await res.text());
+      console.error("[auth] Express /api/auth/google failed:", res.status, text);
       return null;
     }
 
-    return res.json();
+    const data = JSON.parse(text) as {
+      token: string;
+      user: { id: string; email: string; name: string | null };
+    };
+    console.log("[auth] Express /api/auth/google OK — userId:", data.user.id);
+    return data;
   } catch (error) {
     console.error("[auth] Express /api/auth/google error:", error);
     return null;
@@ -50,6 +57,11 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     async jwt({ token, account, profile }) {
       if (account?.provider === "google" && profile?.email) {
+        console.log("[auth jwt] Google sign-in — exchanging for Express JWT", {
+          email: profile.email,
+          providerAccountId: account.providerAccountId,
+        });
+
         const expressAuth = await exchangeGoogleForExpressJwt(
           profile.email,
           profile.name ?? profile.email.split("@")[0] ?? "User",
@@ -59,9 +71,13 @@ export const authOptions: NextAuthOptions = {
         if (expressAuth) {
           token.expressToken = expressAuth.token;
           token.expressUser = expressAuth.user;
+          console.log("[auth jwt] expressToken saved on JWT for user:", expressAuth.user.id);
+        } else {
+          console.error("[auth jwt] expressToken NOT set — Express exchange failed");
         }
       }
 
+      console.log("[auth jwt] returning token, has expressToken:", Boolean(token.expressToken));
       return token;
     },
     async session({ session, token }) {
@@ -80,6 +96,13 @@ export const authOptions: NextAuthOptions = {
           name: string | null;
         };
       }
+
+      console.log("[auth session] built session:", {
+        userId: session.user?.id,
+        email: session.user?.email,
+        hasExpressToken: Boolean(session.expressToken),
+        expressUserId: session.expressUser?.id,
+      });
 
       return session;
     },
